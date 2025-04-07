@@ -1,0 +1,7 @@
+aiogram
+asyncio
+aiohttp
+requests
+pymongo
+python-dotenv
+colorama

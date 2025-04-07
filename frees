@@ -1,0 +1,87 @@
+gpt-4o
+gpt-4o-mini
+deepseek-v3
+llama-3.1-8b-instruct
+llama-3.1-sonar-small-128k-online
+deepseek-r1-uncensored
+tinyswallow1.5b
+andy-3.5
+o3-mini-low
+hermes-3-llama-3.2-3b
+creitin-r1
+fluffy.1-chat
+plutotext-1-text
+command-a Use it for Cline!!
+plutogpt-3.5-turbo
+plutogpt-4o-mini
+secret-model-1
+
+
+{
+      "id": "flux-disney",
+      "object": "model",
+      "created": 1731025295,
+      "owned_by": "llmplayground.net",
+      "type": "v1/images/generations",
+      "free": true
+    },
+
+{
+      "id": "Flux Schnell",
+      "object": "model",
+      "created": 1738257660,
+      "owned_by": "black-forest-labs",
+      "type": "v1/images/generations",
+      "free": true
+    },
+{
+      "id": "Flux Dev",
+      "object": "model",
+      "created": 1738257808,
+      "owned_by": "black-forest-labs",
+      "type": "v1/images/generations",
+      "free": true
+    },
+    {
+      "id": "Flux Pro",
+      "object": "model",
+      "created": 1738257815,
+      "owned_by": "black-forest-labs",
+      "type": "v1/images/generations",
+      "free": true
+    },
+    {
+      "id": "Flux Pro Ultra",
+      "object": "model",
+      "created": 1738257824,
+      "owned_by": "black-forest-labs",
+      "type": "v1/images/generations",
+      "free": true
+    },
+    {
+      "id": "Flux Pro Ultra Raw",
+      "object": "model",
+      "created": 1738257829,
+      "owned_by": "black-forest-labs",
+      "type": "v1/images/generations",
+      "free": true
+    },
+
+{
+      "id": "flux-pixel",
+      "object": "model",
+      "created": 1739727973,
+      "owned_by": "black-forest-labs",
+      "type": "v1/images/generations",
+      "free": true
+    },
+    {
+      "id": "flux-realism",
+      "object": "model",
+      "created": 1739728631,
+      "owned_by": "black-forest-labs",
+      "type": "v1/images/generations",
+      "free": true
+    },
+
+
