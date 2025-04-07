@@ -203,7 +203,7 @@ async def process_message(message: types.Message) -> None:
     # doc["messages"].append(f"{message.from_user.full_name}: {message.text}")
     # TODO: rewrite this to separate messages in chunks
     my_message = await message.reply("Погоди, я пишу ответ...")
-    retries_count = 4
+    retries_count = 8
     while retries_count > 0:
 
         try:
@@ -332,14 +332,14 @@ async def process_message(message: types.Message) -> None:
             await my_message.edit_text(
                 f"Ой, нейронка не ответила :(\nЕсли что ваше сообщение я не запомнил :(\nНо зато я попробую ответить ещё {retries_count} раз.")
             traceback.print_exc()
-            await asyncio.sleep(2)
+            await asyncio.sleep(5)
 
         except:
             retries_count -= 1
             await my_message.edit_text(
                 f"Ой, что-то навернулось :(\nЕсли что ваше сообщение я не запомнил :(\nНо зато я попробую ответить ещё {retries_count} раз.")
             traceback.print_exc()
-            await asyncio.sleep(2)
+            await asyncio.sleep(5)
 
 
 @router.message(F.reply_to_message & F.reply_to_message.from_user.id == bot.id)  # and F.from_user.id == bot.id)
