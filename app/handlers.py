@@ -276,7 +276,7 @@ async def process_message(message: types.Message) -> None:
             # print(emoji)
             # important disabled code!
             # await message.react([ReactionTypeEmoji(emoji=emoji)])
-            model = ChatModels.GPT4o
+            model = ChatModels.DeepseekR1Uncensored
             history = ChatHistory([ChatMessage(ChatRole.System, f"Answer in russian unless otherwise requested. "
                                                                 f"Carefully heed the user's instructions. "
                                                                 f"Be creative. Use emoji. Prefer light and casual dialogue. "
