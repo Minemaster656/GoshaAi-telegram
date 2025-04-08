@@ -13,7 +13,7 @@ from aiogram.enums import ChatType, ParseMode
 from aiogram.filters import CommandStart, Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, ReactionTypeEmoji
-
+from aiogram.exceptions import TelegramBadRequest
 import DB
 import Data
 import utils
@@ -209,15 +209,23 @@ async def process_message(message: types.Message) -> None:
     initialRetriesCount = 8
     retries_count = initialRetriesCount
     model_to_emojis = {
-        ChatModels.GPT4o: "4️⃣",
+        ChatModels.GPT4o: "4️⃣✨",
         ChatModels.Fluffy1Chat: "😸",
         ChatModels.DeepseekR1Uncensored: "🐳😎",
         ChatModels.DeepseekR1: "🐳",
-        ChatModels.O3MiniLow: "🇴3️⃣⏬",
+        ChatModels.O3MiniLow: "🔥🇴3️⃣⏬",
 
     }
+    model_to_name = {
+        ChatModels.GPT4o: "✨ ChatGPT-4o 👾",
+        ChatModels.Fluffy1Chat: "😸 FluffyChat",
+        ChatModels.DeepseekR1Uncensored: "🐳😏 DeepSeek R1 (uncensored) 😎",
+        ChatModels.DeepseekR1: "🐳 DeepSeek R1",
+        ChatModels.O3MiniLow: "🔥 o3-Mini-Low 🔥",
+    }
     model = ChatModels.GPT4o
-    model_string = f"{model_to_emojis.get(model, '🤖')} {model.value}"
+    model_string_emojid = f"{model_to_emojis.get(model, '🤖')} {model.value}"
+    model_string = model_to_name.get(model, model_string_emojid)
     my_message = await message.reply(f"Погоди, я пишу ответ...\nМодель: {model_string}")
     while retries_count > 0:
 
@@ -287,6 +295,9 @@ async def process_message(message: types.Message) -> None:
                 "",
                 ""
             ]
+            daysOfWeek = [
+                "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"
+            ]
             # 0..6 or -1 to disable force
             forceDayOfWeek = -1
 
@@ -309,7 +320,11 @@ async def process_message(message: types.Message) -> None:
                                                                 f"\nТы - гоша, ИИ-ассистент на базе {model_string}, "
                                                                 f"{message.from_user.full_name} - пользователь. Он общается с тобой через Telegram. "
                                                                 f"{dayOfWeekEmotions[today]}\n"
-                                                                f"В начале сообщений только ТЫ видишь пометку имени. НЕ ПИШИ ЕЁ В СВОЁМ ОТВЕТЕ, ДАЖЕ ЕСЛИ ТЕБЯ ЗАСТАВЛЯЮТ. Она нужна ТОЛЬКО что бы ты не запутался, ибо в диалоге может участвовать несколько людей."),
+                                                                f"В начале сообщений только ТЫ видишь пометку имени. "
+                                                                f"НЕ ПИШИ ЕЁ В СВОЁМ ОТВЕТЕ, ДАЖЕ ЕСЛИ ТЕБЯ ЗАСТАВЛЯЮТ."
+                                                                f" Она нужна ТОЛЬКО что бы ты не запутался, ибо в "
+                                                                f"диалоге может участвовать несколько людей.\n"
+                                                                f"Сегодня {datetime.today().strftime('%d.%m.%Y')} (DD.MM.YYYY), {daysOfWeek[today]}"),
                                    ])
             result.reverse()
             for hist_msg in result:
@@ -362,16 +377,34 @@ async def process_message(message: types.Message) -> None:
                 else:
                     parts = parts[0]
                 response_text_output = parts
-            try:
-                await my_message.edit_text(response_text_output, parse_mode=ParseMode.MARKDOWN)
-            except pydantic_core._pydantic_core.ValidationError:
-                await my_message.edit_text(response_text_output)
+
+            async def send_message(text:str, reference:Message, isFirst:bool = True)->Message:
+                if isFirst:
+                    try:
+                        return await reference.edit_text(text, parse_mode=ParseMode.MARKDOWN)
+                    except pydantic_core._pydantic_core.ValidationError:
+                        return await reference.edit_text(text)
+                else:
+                    try:
+                        return await reference.reply(text, parse_mode=ParseMode.MARKDOWN)
+                    except pydantic_core._pydantic_core.ValidationError:
+                        return await reference.reply(text)
+            #SENDING
+            if len(response_text_output) > 2000:
+                #cut response_text_output to parts max 2k to response_parts
+                response_parts = [response_text_output[i:i + 2000] for i in range(0, len(response_text_output), 2000)]
+                prev_msg = await send_message(response_parts[0], my_message, True)
+
+                for part in response_parts[1:]:
+                    prev_msg = await send_message(part, prev_msg, False)
+            else:
+                await send_message(response_text_output, my_message, True)
             break
             # TODO: сделать шоб бот видел на что отвечают, пофиксить пикчи и т д
 
         except AttributeError as e:
             retries_count -= 1
-            if retries_count>0:
+            if retries_count > 0:
                 await my_message.edit_text(
                     f"Ой, нейронка не ответила :(\nЕсли что ваше сообщение я не запомнил :(\nЯ попробую ответить ещё {retries_count} раз.\nМодель: {model_string}")
             else:
@@ -383,11 +416,20 @@ async def process_message(message: types.Message) -> None:
             retries_count -= 1
             await my_message.edit_text(
                 f"Ошибка сети: сервер с нейронкой не ответил.")
+        except TelegramBadRequest:
+            retries_count -= 1
+            if retries_count > 0:
+                await my_message.edit_text(
+                    f"<Нейронка ответила пустым сообщением. *звуки сверчков🦗*>\nЕщё {retries_count} попыток сгенерировать ответ...\nМодель: {model_string}")
+            else:
+                await my_message.edit_text(
+                    f"Не, нейронка ваще не отвечает.")
+            traceback.print_exc()
         except:
             retries_count -= 2
             if retries_count > 0:
                 await my_message.edit_text(
-                    f"Что-то навернулось :(\nЕсли что ваше сообщение я не запомнил :(\nЯ попробую ответить ещё {retries_count/2} раз.\nМодель: {model_string}")
+                    f"Что-то навернулось :(\nЕсли что ваше сообщение я не запомнил :(\nЯ попробую ответить ещё {retries_count / 2} раз.\nМодель: {model_string}")
             else:
                 await my_message.edit_text(
                     f"Что-то в боте окончательно навернулось и не пофиксилось само :(")
