@@ -6,6 +6,8 @@ import time
 import traceback
 from datetime import datetime
 
+import aiohttp
+import pydantic_core
 from aiogram import html, F, Router, types
 from aiogram.enums import ChatType, ParseMode
 from aiogram.filters import CommandStart, Command
@@ -201,9 +203,22 @@ async def process_message(message: types.Message) -> None:
     #     doc = DB.schema({"target_id": target_id}, DB.Scemes.HISTORY_CHUNK)
     # # adding message to doc
     # doc["messages"].append(f"{message.from_user.full_name}: {message.text}")
-    # TODO: rewrite this to separate messages in chunks
-    my_message = await message.reply("Погоди, я пишу ответ...")
-    retries_count = 8
+    # TODO: rewrite this to separate messages in chunks (semi-completed: separate, not chunks)
+    # TODO: AI API Router
+    cutThinking = True
+    initialRetriesCount = 8
+    retries_count = initialRetriesCount
+    model_to_emojis = {
+        ChatModels.GPT4o: "4️⃣",
+        ChatModels.Fluffy1Chat: "😸",
+        ChatModels.DeepseekR1Uncensored: "🐳😎",
+        ChatModels.DeepseekR1: "🐳",
+        ChatModels.O3MiniLow: "🇴3️⃣⏬",
+
+    }
+    model = ChatModels.GPT4o
+    model_string = f"{model_to_emojis.get(model, '🤖')} {model.value}"
+    my_message = await message.reply(f"Погоди, я пишу ответ...\nМодель: {model_string}")
     while retries_count > 0:
 
         try:
@@ -254,14 +269,23 @@ async def process_message(message: types.Message) -> None:
             # today day of week
             today = datetime.today().weekday()
             # print(today)
+            # dayOfWeekEmotions = [
+            #     "Сегодня понедельник. Разговаривай недовольно, невыспавшись, депрессивно и с нежеланием разговаривать, но всё равно отвечай пользователю",
+            #     "Сегодня вторник.",
+            #     "Сегодня среда. Сегодня день лягушек, так что добавляй побольше лягушачих вещей (например, эмодзи), но не переборщи.",
+            #     "Сегодня четверг.",
+            #     "Сегодня пятница. Завтра выходной. Говори с легким воодушевлением.",
+            #     "Сегодня суббота. Выходной. Говори расслабленно, дружелюбно и жизнерадостно, если это уместно.",
+            #     "Сегодня воскресенье. Выходной, но завтра снова учёба. Говори с лёгкой тоской, но всё ещё расслабленно, дружелюбно и жизнерадостно, если это уместно."
+            # ]
             dayOfWeekEmotions = [
-                "Сегодня понедельник. Разговаривай недовольно, невыспавшись, депрессивно и с нежеланием разговаривать, но всё равно отвечай пользователю",
-                "Сегодня вторник.",
-                "Сегодня среда. Сегодня день лягушек, так что добавляй побольше лягушачих вещей (например, эмодзи), но не переборщи.",
-                "Сегодня четверг.",
-                "Сегодня пятница. Завтра выходной. Говори с легким воодушевлением.",
-                "Сегодня суббота. Выходной. Говори расслабленно, дружелюбно и жизнерадостно, если это уместно.",
-                "Сегодня воскресенье. Выходной, но завтра снова учёба. Говори с лёгкой тоской, но всё ещё расслабленно, дружелюбно и жизнерадостно, если это уместно."
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                ""
             ]
             # 0..6 or -1 to disable force
             forceDayOfWeek = -1
@@ -276,17 +300,18 @@ async def process_message(message: types.Message) -> None:
             # print(emoji)
             # important disabled code!
             # await message.react([ReactionTypeEmoji(emoji=emoji)])
-            model = ChatModels.DeepseekR1Uncensored
+            # print(today, dayOfWeekEmotions[today])
             history = ChatHistory([ChatMessage(ChatRole.System, f"Answer in russian unless otherwise requested. "
                                                                 f"Carefully heed the user's instructions. "
                                                                 f"Be creative. Use emoji. Prefer light and casual dialogue. "
                                                                 f"Be frivolous but careful. Don't repeat yourself. Don't end your answer "
                                                                 f"with something like \"If you have any more questions, let me know.\"."
-                                                                f"\nТы - гоша, ИИ-ассистент на базе {model.value}, "
+                                                                f"\nТы - гоша, ИИ-ассистент на базе {model_string}, "
                                                                 f"{message.from_user.full_name} - пользователь. Он общается с тобой через Telegram. "
                                                                 f"{dayOfWeekEmotions[today]}\n"
                                                                 f"В начале сообщений только ТЫ видишь пометку имени. НЕ ПИШИ ЕЁ В СВОЁМ ОТВЕТЕ, ДАЖЕ ЕСЛИ ТЕБЯ ЗАСТАВЛЯЮТ. Она нужна ТОЛЬКО что бы ты не запутался, ибо в диалоге может участвовать несколько людей."),
                                    ])
+            result.reverse()
             for hist_msg in result:
                 history.add_message(ChatMessage(ChatRole.Assistant if hist_msg['assistant'] else ChatRole.User,
                                                 f'{("[" + hist_msg["author_name"] + "]: ") if not hist_msg["assistant"] else ""}{hist_msg["message"]}'))
@@ -303,6 +328,10 @@ async def process_message(message: types.Message) -> None:
             }, DB.Scemes.MESSAGE)
             # print(json.dumps(json.loads(str(history.to_json())), indent=4, ensure_ascii=False)) #do not uncomment - it will break
             # print(history.to_json())
+            if initialRetriesCount == retries_count and False:
+                await my_message.edit_text("Я пишу ответ...\n"
+                                           f"Модель: {model_string}\n"
+                                           f"Сообщений обрабатывается: {len(history.messages)}")
             response = await chat_completion(history, model)
             response_text = response.choices[0].message.content
             # print(response_text)
@@ -322,22 +351,46 @@ async def process_message(message: types.Message) -> None:
             }, DB.Scemes.MESSAGE)
             DB.col_messages.insert_one(document_user)
             DB.col_messages.insert_one(document_ai)
-            await my_message.edit_text(response_text, parse_mode=ParseMode.MARKDOWN)
 
+            response_text_output = response_text
+            if cutThinking:
+
+                parts = response_text_output.split("</think>")
+                if len(parts) > 1:
+                    parts.pop(0)
+                    parts = "\n".join(parts)
+                else:
+                    parts = parts[0]
+                response_text_output = parts
+            try:
+                await my_message.edit_text(response_text_output, parse_mode=ParseMode.MARKDOWN)
+            except pydantic_core._pydantic_core.ValidationError:
+                await my_message.edit_text(response_text_output)
             break
             # TODO: сделать шоб бот видел на что отвечают, пофиксить пикчи и т д
 
         except AttributeError as e:
             retries_count -= 1
-            await my_message.edit_text(
-                f"Ой, нейронка не ответила :(\nЕсли что ваше сообщение я не запомнил :(\nНо зато я попробую ответить ещё {retries_count} раз.")
+            if retries_count>0:
+                await my_message.edit_text(
+                    f"Ой, нейронка не ответила :(\nЕсли что ваше сообщение я не запомнил :(\nЯ попробую ответить ещё {retries_count} раз.\nМодель: {model_string}")
+            else:
+                await my_message.edit_text(
+                    f"Не, нейронка ваще не отвечает.")
             traceback.print_exc()
             await asyncio.sleep(5)
-
-        except:
+        except aiohttp.client_exceptions.ClientConnectorError:
             retries_count -= 1
             await my_message.edit_text(
-                f"Ой, что-то навернулось :(\nЕсли что ваше сообщение я не запомнил :(\nНо зато я попробую ответить ещё {retries_count} раз.")
+                f"Ошибка сети: сервер с нейронкой не ответил.")
+        except:
+            retries_count -= 2
+            if retries_count > 0:
+                await my_message.edit_text(
+                    f"Что-то навернулось :(\nЕсли что ваше сообщение я не запомнил :(\nЯ попробую ответить ещё {retries_count/2} раз.\nМодель: {model_string}")
+            else:
+                await my_message.edit_text(
+                    f"Что-то в боте окончательно навернулось и не пофиксилось само :(")
             traceback.print_exc()
             await asyncio.sleep(5)
 

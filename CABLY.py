@@ -31,6 +31,7 @@ class ChatModels(Enum):
     AionRP = "aion-rp"
     DeepseekR1Uncensored = "deepseek-r1-uncensored" #FREE
     Fluffy1Chat = "fluffy.1-chat" # FREE but returns empty string
+    O3MiniLow = "o3-mini-low"
 
 class Text2ImgModels(Enum):
     Dalle2 = "dall-e-2"

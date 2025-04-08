@@ -10,6 +10,8 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 # ], resize_keyboard=True, input_field_placeholder="Выберите пункт меню...")
 
 
-main=ReplyKeyboardMarkup(keyboard=[
+main=ReplyKeyboardMarkup(keyboard=[[
+    # KeyboardButton(text="👁 Отладка")
+]
 
 ])
